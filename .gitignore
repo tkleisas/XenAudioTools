@@ -1,0 +1,8 @@
+build*/
+formalized_music.txt
+*.o
+*.so
+*.dylib
+*.dll
+.DS_Store
+Xenakis_Iannis_Formalized_Music_*.pdf

@@ -1,0 +1,6 @@
+add_executable(xen_tests test_xen.cpp)
+target_link_libraries(xen_tests PRIVATE xen_engine)
+target_compile_features(xen_tests PRIVATE cxx_std_17)
+add_test(NAME xen_tests COMMAND xen_tests)
+target_compile_options(xen_tests PRIVATE -Wall -Wextra -Wpedantic)
+target_compile_definitions(xen_tests PRIVATE XEN_PRESETS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../presets")

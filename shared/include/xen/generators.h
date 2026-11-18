@@ -225,7 +225,6 @@ inline void generateStrategy(Page& page, StrategyGame game, const StrategyGenPar
     const int cols = std::max(1, game.cols());
 
     double t = p.t0;
-    int step = 0;
     while (t < p.t1)
     {
         if (p.useReplicator)
@@ -243,7 +242,6 @@ inline void generateStrategy(Page& page, StrategyGame game, const StrategyGenPar
         a.group = group;
         page.arcs.push_back(a);
         t += std::max(0.005, dur);
-        ++step;
     }
     page.sortArcs();
     page.updateDuration();

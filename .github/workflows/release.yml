@@ -10,7 +10,7 @@ on:
       version:
         description: "Version without the leading v (manual build only)"
         required: false
-        default: "0.1.1"
+        default: "0.1.2"
 
 permissions:
   contents: write
@@ -35,7 +35,7 @@ jobs:
           elif [[ "${{ github.event.inputs.version }}" != "" ]]; then
             VERSION="${{ github.event.inputs.version }}"
           else
-            VERSION="0.1.1"
+            VERSION="0.1.2"
           fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Building version $VERSION"
@@ -115,7 +115,7 @@ jobs:
         run: ./scripts/package_release.sh build "${{ needs.version.outputs.version }}" dist
 
       - name: Upload packaged artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: xenakis-upic-linux
           path: |
@@ -165,7 +165,7 @@ jobs:
         run: pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/package_release.ps1 -BuildDir build -Version "${{ needs.version.outputs.version }}" -OutDir dist
 
       - name: Upload packaged artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: xenakis-upic-windows
           path: dist/*.zip
@@ -221,7 +221,7 @@ jobs:
         run: PLATFORM=macos-universal ./scripts/package_release.sh build "${{ needs.version.outputs.version }}" dist
 
       - name: Upload packaged artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: xenakis-upic-macos
           path: dist/*.zip
@@ -234,7 +234,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Download packaged artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           pattern: xenakis-upic-*
           merge-multiple: true
@@ -254,7 +254,7 @@ jobs:
           cat SHA256SUMS
 
       - name: Create GitHub release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           name: Xenakis UPIC ${{ github.ref_name }}
           files: artifacts/*

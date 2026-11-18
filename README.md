@@ -101,8 +101,8 @@ GitHub release. The version comes from the tag, or from `-DXEN_VERSION=...` for 
 manual build.
 
 ```bash
-git tag -a v0.1.1 -m "Xenakis UPIC v0.1.1"
-git push origin v0.1.1
+git tag -a v0.1.2 -m "Xenakis UPIC v0.1.2"
+git push origin v0.1.2
 ```
 
 Release assets:

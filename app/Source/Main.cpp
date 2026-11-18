@@ -10,6 +10,10 @@
 #include "xen/page_model.h"
 #include "xen/ui/XenEditorPanel.h"
 
+#ifndef XEN_VERSION_STRING
+#define XEN_VERSION_STRING "0.1.0"
+#endif
+
 class XenakisMainComponent : public juce::AudioAppComponent
 {
 public:
@@ -103,7 +107,7 @@ class XenakisUPICApplication : public juce::JUCEApplication
 {
 public:
     const juce::String getApplicationName() override { return "Xenakis UPIC Studio"; }
-    const juce::String getApplicationVersion() override { return "0.1.0"; }
+    const juce::String getApplicationVersion() override { return XEN_VERSION_STRING; }
     bool moreThanOneInstanceAllowed() override { return true; }
 
     void initialise(const juce::String& commandLine) override

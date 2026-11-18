@@ -8,6 +8,7 @@ juce_add_gui_app(XenakisUPICStudio
 target_sources(XenakisUPICStudio PRIVATE Source/Main.cpp)
 
 target_compile_definitions(XenakisUPICStudio PRIVATE
+    XEN_VERSION_STRING="${PROJECT_VERSION}"
     JUCE_WEB_BROWSER=0
     JUCE_USE_CURL=0
     JUCE_DISPLAY_SPLASH_SCREEN=0

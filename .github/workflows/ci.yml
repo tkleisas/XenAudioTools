@@ -1,0 +1,112 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux:
+    name: Linux (Release)
+    runs-on: ubuntu-24.04
+    # Build in 22.04 so the VST3/app keep a glibc 2.35 floor instead of
+    # inheriting the 24.04 runner's 2.39 floor.
+    container: ubuntu:22.04
+    steps:
+      # The bare ubuntu:22.04 image has no git; install it before checkout.
+      - name: Bootstrap git
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update
+          apt-get install -y --no-install-recommends git ca-certificates
+
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Install build dependencies
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            git ca-certificates python3 python3-pip ninja-build ccache zip pkg-config g++ \
+            libasound2-dev libjack-jackd2-dev \
+            libfreetype6-dev libfontconfig1-dev \
+            libx11-dev libx11-xcb-dev libxcomposite-dev libxcursor-dev \
+            libxext-dev libxinerama-dev libxrandr-dev libxrender-dev \
+            libglu1-mesa-dev mesa-common-dev libgl1-mesa-dev \
+            libcurl4-openssl-dev
+          python3 -m pip install --no-cache-dir "cmake>=3.24,<4"
+          cmake --version | head -1
+
+      - name: Cache JUCE 7.0.12
+        id: juce
+        uses: actions/cache@v5
+        with:
+          path: juce-src
+          key: juce-7.0.12
+
+      - name: Fetch JUCE 7.0.12
+        if: steps.juce.outputs.cache-hit != 'true'
+        run: git clone --depth 1 --branch 7.0.12 https://github.com/juce-framework/JUCE.git "$GITHUB_WORKSPACE/juce-src"
+
+      - name: Cache ccache
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/ccache
+          key: linux-ccache-${{ github.sha }}
+          restore-keys: linux-ccache-
+
+      - name: Configure
+        run: |
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            -DXEN_JUCE_DIR="$GITHUB_WORKSPACE/juce-src"
+
+      - name: Build
+        # JUCE unity TUs are large; --parallel 2 keeps the 16 GB runner
+        # comfortably below its memory ceiling (same lesson as YAWN/VWave).
+        run: cmake --build build --parallel 2
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+      - name: Validate VST3 bundle
+        run: ./build/vst3/juce_vst3_helper -validate -path "build/vst3/XenakisUPIC_artefacts/Release/VST3/Xenakis UPIC.vst3"
+
+  sanitizers:
+    name: Sanitizers (core library)
+    runs-on: ubuntu-24.04
+    env:
+      ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
+      UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build g++
+
+      - name: Configure
+        run: |
+          cmake -S . -B build-asan -G Ninja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DXEN_BUILD_VST3=OFF \
+            -DXEN_BUILD_APP=OFF \
+            -DXEN_BUILD_TOOLS=OFF \
+            -DCMAKE_C_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer" \
+            -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer" \
+            -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined"
+
+      - name: Build
+        run: cmake --build build-asan --parallel 2
+
+      - name: Test
+        run: ctest --test-dir build-asan --output-on-failure

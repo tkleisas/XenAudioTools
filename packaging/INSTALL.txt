@@ -1,0 +1,26 @@
+Xenakis UPIC - installation
+
+VST3 (Linux)
+------------
+1. Copy the "Xenakis UPIC.vst3" folder into ~/.vst3/.
+2. Rescan plugins in your host (YAWN, Bitwig, Reaper, ...).
+3. Add "Xenakis UPIC" to an instrument track.
+4. Open the editor, press Open, and choose a .xenpage file from presets/,
+   or drag-edit a new page and press Play.
+
+Standalone (Linux)
+------------------
+1. Extract xenakis-upic-studio-<version>-linux-x86_64.tar.gz.
+2. Run "./Xenakis UPIC Studio".
+3. Optionally pass a preset:
+   "./Xenakis UPIC Studio" presets/03-gendyn-drone.xenpage
+
+Quick controls
+--------------
+- Draw: drag from the start of an arc to its end.
+- Erase / Select: choose the tool in the toolbar.
+- Play scans the page; Loop, Reverse and Speed are in the transport.
+- The side tabs generate pages with Sieve, Markov, Cloud, Game and GENDYN.
+- Ctrl/Cmd + mouse wheel zooms; mouse wheel scrolls.
+
+License: GPL-3.0-or-later. See LICENSE and NOTICE.md.

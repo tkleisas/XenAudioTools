@@ -84,13 +84,37 @@ Options:
 | Option | Default | Meaning |
 |---|---|---|
 | `XEN_JUCE_DIR` | `../ans-1964/third_party/JUCE` | JUCE 7 source directory |
+| `XEN_VERSION` | nearest git tag, else `0.1.0` | Version embedded in the app/plugin |
 | `XEN_BUILD_VST3` | `ON` | Build the VST3 instrument |
 | `XEN_BUILD_APP` | `ON` | Build the standalone app |
 | `XEN_BUILD_TESTS` | `ON` | Build and register unit tests |
 | `XEN_BUILD_TOOLS` | `ON` | Build `xen_presets` |
 
-The VST3 is installed to `~/.vst3/Xenakis UPIC.vst3` after a successful build
-(`COPY_PLUGIN_AFTER_BUILD`). The standalone app is at
+## Releases and versioning
+
+Every push and pull request is built and tested by GitHub Actions. Pushing a tag
+named `v*` additionally packages the Linux artifacts and publishes a GitHub
+release. The version comes from the tag, or from `-DXEN_VERSION=...` for a manual
+build.
+
+```bash
+git tag -a v0.1.0 -m "Xenakis UPIC v0.1.0"
+git push origin v0.1.0
+```
+
+Release assets:
+
+| Asset | Contents |
+|---|---|
+| `xenakis-upic-<version>-linux-vst3.zip` | `Xenakis UPIC.vst3`, presets, docs, install notes |
+| `xenakis-upic-studio-<version>-linux-x86_64.tar.gz` | Standalone app, presets, docs, install notes |
+| `SHA256SUMS` | Checksums |
+
+The workflow uses Ubuntu 24.04 and JUCE 7.0.12. Windows and macOS builds must be
+made on those operating systems.
+
+The VST3 is installed to `~/.vst3/Xenakis UPIC.vst3` after a successful local
+build (`COPY_PLUGIN_AFTER_BUILD`). The standalone app is at
 `build/app/XenakisUPICStudio_artefacts/Release/Xenakis UPIC Studio`. It accepts an
 optional preset path:
 

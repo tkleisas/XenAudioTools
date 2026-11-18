@@ -6,3 +6,5 @@ formalized_music.txt
 *.dll
 .DS_Store
 Xenakis_Iannis_Formalized_Music_*.pdf
+juce-src/
+dist/

@@ -20,6 +20,7 @@ target_sources(XenakisUPIC PRIVATE
 )
 
 target_compile_definitions(XenakisUPIC PRIVATE
+    XEN_VERSION_STRING="${PROJECT_VERSION}"
     JUCE_WEB_BROWSER=0
     JUCE_USE_CURL=0
     JUCE_VST3_CAN_REPLACE_VST2=0

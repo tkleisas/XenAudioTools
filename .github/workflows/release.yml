@@ -1,0 +1,136 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  # Manual runs build and upload the packaged artifact for inspection but
+  # never publish a release; the publish job is gated to real tags.
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version without the leading v (manual build only)"
+        required: false
+        default: "0.1.0"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  linux:
+    name: Linux x86_64
+    runs-on: ubuntu-24.04
+    # Same 22.04 container as CI: glibc 2.35 floor, not the 24.04 floor.
+    container: ubuntu:22.04
+    steps:
+      # The bare ubuntu:22.04 image has no git; install it before checkout.
+      - name: Bootstrap git
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update
+          apt-get install -y --no-install-recommends git ca-certificates
+
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Install build dependencies
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            git ca-certificates python3 python3-pip ninja-build ccache zip pkg-config g++ \
+            libasound2-dev libjack-jackd2-dev \
+            libfreetype6-dev libfontconfig1-dev \
+            libx11-dev libx11-xcb-dev libxcomposite-dev libxcursor-dev \
+            libxext-dev libxinerama-dev libxrandr-dev libxrender-dev \
+            libglu1-mesa-dev mesa-common-dev libgl1-mesa-dev \
+            libcurl4-openssl-dev
+          python3 -m pip install --no-cache-dir "cmake>=3.24,<4"
+          cmake --version | head -1
+
+      - name: Determine version
+        id: version
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          elif [[ "${{ github.event.inputs.version }}" != "" ]]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="0.1.0"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Building version $VERSION"
+
+      - name: Cache JUCE 7.0.12
+        id: juce
+        uses: actions/cache@v5
+        with:
+          path: juce-src
+          key: juce-7.0.12
+
+      - name: Fetch JUCE 7.0.12
+        if: steps.juce.outputs.cache-hit != 'true'
+        run: git clone --depth 1 --branch 7.0.12 https://github.com/juce-framework/JUCE.git "$GITHUB_WORKSPACE/juce-src"
+
+      - name: Cache ccache
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/ccache
+          key: linux-release-ccache-${{ github.sha }}
+          restore-keys: |
+            linux-release-ccache-
+            linux-ccache-
+
+      - name: Configure
+        run: |
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            -DXEN_VERSION="${{ steps.version.outputs.version }}" \
+            -DXEN_JUCE_DIR="$GITHUB_WORKSPACE/juce-src"
+
+      - name: Build
+        run: cmake --build build --parallel 2
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+      - name: Validate VST3 bundle
+        run: ./build/vst3/juce_vst3_helper -validate -path "build/vst3/XenakisUPIC_artefacts/Release/VST3/Xenakis UPIC.vst3"
+
+      - name: Package
+        run: ./scripts/package_release.sh build "${{ steps.version.outputs.version }}" dist
+
+      - name: Upload packaged artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: xenakis-upic-linux
+          path: dist/*
+          if-no-files-found: error
+
+  publish:
+    name: Publish GitHub release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [linux]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Download packaged artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: xenakis-upic-*
+          merge-multiple: true
+          path: artifacts
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Xenakis UPIC ${{ github.ref_name }}
+          files: artifacts/*
+          generate_release_notes: true
+          fail_on_unmatched_files: true

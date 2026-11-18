@@ -1,19 +1,26 @@
 Xenakis UPIC - installation
 
-VST3 (Linux)
-------------
-1. Copy the "Xenakis UPIC.vst3" folder into ~/.vst3/.
-2. Rescan plugins in your host (YAWN, Bitwig, Reaper, ...).
-3. Add "Xenakis UPIC" to an instrument track.
-4. Open the editor, press Open, and choose a .xenpage file from presets/,
-   or drag-edit a new page and press Play.
+VST3
+----
+Linux:   copy "Xenakis UPIC.vst3" into ~/.vst3/
+Windows: copy "Xenakis UPIC.vst3" into C:\Program Files\Common Files\VST3\
+macOS:   copy "Xenakis UPIC.vst3" into ~/Library/Audio/Plug-Ins/VST3/
 
-Standalone (Linux)
-------------------
-1. Extract xenakis-upic-studio-<version>-linux-x86_64.tar.gz.
-2. Run "./Xenakis UPIC Studio".
-3. Optionally pass a preset:
-   "./Xenakis UPIC Studio" presets/03-gendyn-drone.xenpage
+Rescan plugins in your host (YAWN, Bitwig, Reaper, ...), add "Xenakis UPIC" to
+an instrument track, open the editor, press Open, and choose a .xenpage file
+from presets/. You can also draw a new page and press Play.
+
+Standalone
+----------
+Linux:   ./Xenakis UPIC Studio [preset.xenpage]
+Windows: "Xenakis UPIC Studio.exe" [preset.xenpage]
+macOS:   open "Xenakis UPIC Studio.app"
+         First launch: right-click the app and choose Open (the build is
+         ad-hoc signed, not notarized).
+
+The Windows build uses the Microsoft Visual C++ 2015-2022 runtime (normally
+present on Windows 10/11; install the x64 redistributable if the app or plugin
+does not start).
 
 Quick controls
 --------------

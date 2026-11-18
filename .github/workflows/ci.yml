@@ -48,7 +48,7 @@ jobs:
         uses: actions/cache@v5
         with:
           path: juce-src
-          key: juce-7.0.12
+          key: juce-7.0.12-Linux
 
       - name: Fetch JUCE 7.0.12
         if: steps.juce.outputs.cache-hit != 'true'
@@ -79,6 +79,88 @@ jobs:
 
       - name: Validate VST3 bundle
         run: ./build/vst3/juce_vst3_helper -validate -path "build/vst3/XenakisUPIC_artefacts/Release/VST3/Xenakis UPIC.vst3"
+
+      - name: Package smoke test
+        run: ./scripts/package_release.sh build 0.0.0 dist
+
+  windows:
+    name: Windows (MSVC)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Cache JUCE 7.0.12
+        id: juce
+        uses: actions/cache@v5
+        with:
+          path: juce-src
+          key: juce-7.0.12-Windows
+
+      - name: Fetch JUCE 7.0.12
+        if: steps.juce.outputs.cache-hit != 'true'
+        run: git clone --depth 1 --branch 7.0.12 https://github.com/juce-framework/JUCE.git "$env:GITHUB_WORKSPACE\juce-src"
+
+      - name: Configure
+        run: >
+          cmake -S . -B build -G "Visual Studio 17 2022" -A x64
+          -DXEN_VERSION=0.0.0
+          -DXEN_JUCE_DIR="$env:GITHUB_WORKSPACE\juce-src"
+
+      - name: Build
+        run: cmake --build build --config Release --parallel 2
+
+      - name: Test
+        run: ctest --test-dir build -C Release --output-on-failure
+
+      - name: Validate VST3 bundle
+        run: |
+          $helper = Get-ChildItem -Recurse -Filter juce_vst3_helper.exe build | Select-Object -First 1
+          if (-not $helper) { throw "juce_vst3_helper.exe not found" }
+          & $helper.FullName -validate -path "build/vst3/XenakisUPIC_artefacts/Release/VST3/Xenakis UPIC.vst3"
+
+      - name: Package smoke test
+        run: pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/package_release.ps1 -BuildDir build -Version 0.0.0 -OutDir dist
+
+  macos:
+    name: macOS (universal)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Cache JUCE 7.0.12
+        id: juce
+        uses: actions/cache@v5
+        with:
+          path: juce-src
+          key: juce-7.0.12-macOS
+
+      - name: Fetch JUCE 7.0.12
+        if: steps.juce.outputs.cache-hit != 'true'
+        run: git clone --depth 1 --branch 7.0.12 https://github.com/juce-framework/JUCE.git "$GITHUB_WORKSPACE/juce-src"
+
+      - name: Configure
+        run: |
+          cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
+            -DXEN_VERSION=0.0.0 \
+            -DXEN_JUCE_DIR="$GITHUB_WORKSPACE/juce-src"
+
+      - name: Build
+        run: cmake --build build --parallel 2
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+      - name: Validate VST3 bundle
+        run: ./build/vst3/juce_vst3_helper -validate -path "build/vst3/XenakisUPIC_artefacts/Release/VST3/Xenakis UPIC.vst3"
+
+      - name: Package smoke test
+        run: PLATFORM=macos-universal ./scripts/package_release.sh build 0.0.0 dist
 
   sanitizers:
     name: Sanitizers (core library)

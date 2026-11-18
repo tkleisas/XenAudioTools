@@ -3,14 +3,14 @@ name: Release
 on:
   push:
     tags: ['v*']
-  # Manual runs build and upload the packaged artifact for inspection but
-  # never publish a release; the publish job is gated to real tags.
+  # Manual runs build and upload packages for inspection but never publish;
+  # the publish job is gated to real tags.
   workflow_dispatch:
     inputs:
       version:
         description: "Version without the leading v (manual build only)"
         required: false
-        default: "0.1.0"
+        default: "0.1.1"
 
 permissions:
   contents: write
@@ -20,8 +20,29 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  version:
+    name: Version
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Determine version
+        id: version
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          elif [[ "${{ github.event.inputs.version }}" != "" ]]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="0.1.1"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Building version $VERSION"
+
   linux:
     name: Linux x86_64
+    needs: version
     runs-on: ubuntu-24.04
     # Same 22.04 container as CI: glibc 2.35 floor, not the 24.04 floor.
     container: ubuntu:22.04
@@ -52,26 +73,12 @@ jobs:
           python3 -m pip install --no-cache-dir "cmake>=3.24,<4"
           cmake --version | head -1
 
-      - name: Determine version
-        id: version
-        shell: bash
-        run: |
-          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
-            VERSION="${GITHUB_REF_NAME#v}"
-          elif [[ "${{ github.event.inputs.version }}" != "" ]]; then
-            VERSION="${{ github.event.inputs.version }}"
-          else
-            VERSION="0.1.0"
-          fi
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "Building version $VERSION"
-
       - name: Cache JUCE 7.0.12
         id: juce
         uses: actions/cache@v5
         with:
           path: juce-src
-          key: juce-7.0.12
+          key: juce-7.0.12-Linux
 
       - name: Fetch JUCE 7.0.12
         if: steps.juce.outputs.cache-hit != 'true'
@@ -92,7 +99,7 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-            -DXEN_VERSION="${{ steps.version.outputs.version }}" \
+            -DXEN_VERSION="${{ needs.version.outputs.version }}" \
             -DXEN_JUCE_DIR="$GITHUB_WORKSPACE/juce-src"
 
       - name: Build
@@ -105,19 +112,116 @@ jobs:
         run: ./build/vst3/juce_vst3_helper -validate -path "build/vst3/XenakisUPIC_artefacts/Release/VST3/Xenakis UPIC.vst3"
 
       - name: Package
-        run: ./scripts/package_release.sh build "${{ steps.version.outputs.version }}" dist
+        run: ./scripts/package_release.sh build "${{ needs.version.outputs.version }}" dist
 
       - name: Upload packaged artifact
         uses: actions/upload-artifact@v4
         with:
           name: xenakis-upic-linux
-          path: dist/*
+          path: |
+            dist/*.zip
+            dist/*.tar.gz
+          if-no-files-found: error
+
+  windows:
+    name: Windows x86_64
+    needs: version
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Cache JUCE 7.0.12
+        id: juce
+        uses: actions/cache@v5
+        with:
+          path: juce-src
+          key: juce-7.0.12-Windows
+
+      - name: Fetch JUCE 7.0.12
+        if: steps.juce.outputs.cache-hit != 'true'
+        run: git clone --depth 1 --branch 7.0.12 https://github.com/juce-framework/JUCE.git "$env:GITHUB_WORKSPACE\juce-src"
+
+      - name: Configure
+        run: >
+          cmake -S . -B build -G "Visual Studio 17 2022" -A x64
+          -DXEN_VERSION="${{ needs.version.outputs.version }}"
+          -DXEN_JUCE_DIR="$env:GITHUB_WORKSPACE\juce-src"
+
+      - name: Build
+        run: cmake --build build --config Release --parallel 2
+
+      - name: Test
+        run: ctest --test-dir build -C Release --output-on-failure
+
+      - name: Validate VST3 bundle
+        run: |
+          $helper = Get-ChildItem -Recurse -Filter juce_vst3_helper.exe build | Select-Object -First 1
+          if (-not $helper) { throw "juce_vst3_helper.exe not found" }
+          & $helper.FullName -validate -path "build/vst3/XenakisUPIC_artefacts/Release/VST3/Xenakis UPIC.vst3"
+
+      - name: Package
+        run: pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/package_release.ps1 -BuildDir build -Version "${{ needs.version.outputs.version }}" -OutDir dist
+
+      - name: Upload packaged artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: xenakis-upic-windows
+          path: dist/*.zip
+          if-no-files-found: error
+
+  macos:
+    name: macOS universal
+    needs: version
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Cache JUCE 7.0.12
+        id: juce
+        uses: actions/cache@v5
+        with:
+          path: juce-src
+          key: juce-7.0.12-macOS
+
+      - name: Fetch JUCE 7.0.12
+        if: steps.juce.outputs.cache-hit != 'true'
+        run: git clone --depth 1 --branch 7.0.12 https://github.com/juce-framework/JUCE.git "$GITHUB_WORKSPACE/juce-src"
+
+      - name: Configure
+        run: |
+          cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
+            -DXEN_VERSION="${{ needs.version.outputs.version }}" \
+            -DXEN_JUCE_DIR="$GITHUB_WORKSPACE/juce-src"
+
+      - name: Build
+        run: cmake --build build --parallel 2
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+      - name: Validate VST3 bundle
+        run: ./build/vst3/juce_vst3_helper -validate -path "build/vst3/XenakisUPIC_artefacts/Release/VST3/Xenakis UPIC.vst3"
+
+      - name: Package
+        run: PLATFORM=macos-universal ./scripts/package_release.sh build "${{ needs.version.outputs.version }}" dist
+
+      - name: Upload packaged artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: xenakis-upic-macos
+          path: dist/*.zip
           if-no-files-found: error
 
   publish:
     name: Publish GitHub release
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [linux]
+    needs: [linux, windows, macos]
     runs-on: ubuntu-24.04
     steps:
       - name: Download packaged artifacts
@@ -126,6 +230,19 @@ jobs:
           pattern: xenakis-upic-*
           merge-multiple: true
           path: artifacts
+
+      - name: Generate combined checksums
+        shell: bash
+        run: |
+          cd artifacts
+          shopt -s nullglob
+          files=(*.zip *.tar.gz)
+          if (( ${#files[@]} == 0 )); then
+            echo "no release archives found" >&2
+            exit 1
+          fi
+          sha256sum "${files[@]}" > SHA256SUMS
+          cat SHA256SUMS
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2

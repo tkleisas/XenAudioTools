@@ -94,28 +94,35 @@ Options:
 
 ## Releases and versioning
 
-Every push and pull request is built and tested by GitHub Actions. Pushing a tag
-named `v*` additionally packages the Linux artifacts and publishes a GitHub
-release. The version comes from the tag, or from `-DXEN_VERSION=...` for a manual
-build.
+Every push and pull request is built and tested by GitHub Actions on Linux,
+Windows (MSVC), and macOS (universal), plus an ASan/UBSan pass over the core
+library. Pushing a tag named `v*` packages all three platforms and publishes a
+GitHub release. The version comes from the tag, or from `-DXEN_VERSION=...` for a
+manual build.
 
 ```bash
-git tag -a v0.1.0 -m "Xenakis UPIC v0.1.0"
-git push origin v0.1.0
+git tag -a v0.1.1 -m "Xenakis UPIC v0.1.1"
+git push origin v0.1.1
 ```
 
 Release assets:
 
 | Asset | Contents |
 |---|---|
-| `xenakis-upic-<version>-linux-vst3.zip` | `Xenakis UPIC.vst3`, presets, docs, install notes |
+| `xenakis-upic-<version>-linux-x86_64-vst3.zip` | `Xenakis UPIC.vst3`, presets, docs, install notes |
 | `xenakis-upic-studio-<version>-linux-x86_64.tar.gz` | Standalone app, presets, docs, install notes |
-| `SHA256SUMS` | Checksums |
+| `xenakis-upic-<version>-windows-x86_64-vst3.zip` | `Xenakis UPIC.vst3`, presets, docs, install notes |
+| `xenakis-upic-studio-<version>-windows-x86_64.zip` | Standalone app, presets, docs, install notes |
+| `xenakis-upic-<version>-macos-universal-vst3.zip` | `Xenakis UPIC.vst3`, presets, docs, install notes |
+| `xenakis-upic-studio-<version>-macos-universal.zip` | Standalone app, presets, docs, install notes |
+| `SHA256SUMS` | Combined checksums |
 
-The workflow runs in an `ubuntu:22.04` container (glibc 2.35 floor) with JUCE
-7.0.12, uses bounded parallelism and ccache, and only publishes from real `v*`
-tags. It currently produces Linux x86_64 artifacts; Windows and macOS builds must
-be made on those operating systems.
+The Linux job runs in an `ubuntu:22.04` container (glibc 2.35 floor) with JUCE
+7.0.12 and ccache; the Windows job uses MSVC 2022; the macOS job builds a
+universal arm64/x86_64 bundle. Only real `v*` tags publish a release. macOS
+artifacts are ad-hoc signed but not notarized, so use right-click -> Open on the
+first launch. The Windows app and plugin use the Visual C++ 2015-2022 runtime,
+which is normally present on Windows 10/11.
 
 The VST3 is installed to `~/.vst3/Xenakis UPIC.vst3` after a successful local
 build (`COPY_PLUGIN_AFTER_BUILD`). The standalone app is at

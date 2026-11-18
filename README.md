@@ -4,6 +4,8 @@ An independent, source-available suite of composing and synthesis tools built fr
 the algorithms in Iannis Xenakis's *Formalized Music*, plus a modern expansion of
 the **UPIC** graphical score idea.
 
+[Latest release](https://github.com/tkleisas/XenAudioTools/releases/latest)
+
 The suite is three things sharing one engine:
 
 - **`lib/`** — a header-only C++17 library (`xen`) implementing sieves, dynamic
@@ -110,8 +112,10 @@ Release assets:
 | `xenakis-upic-studio-<version>-linux-x86_64.tar.gz` | Standalone app, presets, docs, install notes |
 | `SHA256SUMS` | Checksums |
 
-The workflow uses Ubuntu 24.04 and JUCE 7.0.12. Windows and macOS builds must be
-made on those operating systems.
+The workflow runs in an `ubuntu:22.04` container (glibc 2.35 floor) with JUCE
+7.0.12, uses bounded parallelism and ccache, and only publishes from real `v*`
+tags. It currently produces Linux x86_64 artifacts; Windows and macOS builds must
+be made on those operating systems.
 
 The VST3 is installed to `~/.vst3/Xenakis UPIC.vst3` after a successful local
 build (`COPY_PLUGIN_AFTER_BUILD`). The standalone app is at

@@ -30,6 +30,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+option(XEN_LIBRARY_ONLY "Build only the core xen library and engine (for embedding)" OFF)
 option(XEN_BUILD_VST3 "Build the JUCE VST3 instrument" ON)
 option(XEN_BUILD_APP "Build the standalone UPIC Studio application" ON)
 option(XEN_BUILD_TESTS "Build the unit tests" ON)
@@ -38,16 +39,27 @@ option(XEN_BUILD_TOOLS "Build preset and helper tools" ON)
 set(XEN_JUCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../ans-1964/third_party/JUCE"
     CACHE PATH "JUCE source directory")
 
+if(XEN_LIBRARY_ONLY)
+    set(XEN_BUILD_VST3 OFF CACHE BOOL "" FORCE)
+    set(XEN_BUILD_APP OFF CACHE BOOL "" FORCE)
+    set(XEN_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    set(XEN_BUILD_TOOLS OFF CACHE BOOL "" FORCE)
+endif()
+
 if(XEN_BUILD_VST3 OR XEN_BUILD_APP)
     if(NOT EXISTS "${XEN_JUCE_DIR}/CMakeLists.txt")
         message(FATAL_ERROR "JUCE not found at ${XEN_JUCE_DIR}. Set -DXEN_JUCE_DIR=<path>.")
     endif()
 endif()
 
-enable_testing()
-
 add_subdirectory(lib)
 add_subdirectory(shared)
+
+if(XEN_LIBRARY_ONLY)
+    return()
+endif()
+
+enable_testing()
 
 if(XEN_BUILD_VST3 OR XEN_BUILD_APP)
     add_subdirectory("${XEN_JUCE_DIR}" JUCE)

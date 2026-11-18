@@ -87,6 +87,7 @@ Options:
 |---|---|---|
 | `XEN_JUCE_DIR` | `../ans-1964/third_party/JUCE` | JUCE 7 source directory |
 | `XEN_VERSION` | nearest git tag, else `0.1.0` | Version embedded in the app/plugin |
+| `XEN_LIBRARY_ONLY` | `OFF` | Build only `xen::core` / `xen::engine` for embedding (skips JUCE, VST3, app, tests, tools) |
 | `XEN_BUILD_VST3` | `ON` | Build the VST3 instrument |
 | `XEN_BUILD_APP` | `ON` | Build the standalone app |
 | `XEN_BUILD_TESTS` | `ON` | Build and register unit tests |

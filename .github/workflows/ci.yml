@@ -104,9 +104,9 @@ jobs:
 
       - name: Configure
         run: >
-          cmake -S . -B build -G "Visual Studio 17 2022" -A x64
-          -DXEN_VERSION=0.0.0
-          -DXEN_JUCE_DIR="$env:GITHUB_WORKSPACE\juce-src"
+          cmake -S . -B build -A x64
+          "-DXEN_VERSION=0.0.0"
+          "-DXEN_JUCE_DIR=$env:GITHUB_WORKSPACE\juce-src"
 
       - name: Build
         run: cmake --build build --config Release --parallel 2
@@ -141,6 +141,15 @@ jobs:
       - name: Fetch JUCE 7.0.12
         if: steps.juce.outputs.cache-hit != 'true'
         run: git clone --depth 1 --branch 7.0.12 https://github.com/juce-framework/JUCE.git "$GITHUB_WORKSPACE/juce-src"
+
+      - name: Patch JUCE for the macOS 15+ SDK
+        run: |
+          cd "$GITHUB_WORKSPACE/juce-src"
+          if grep -q "JUCE_MACOS15_SNAPSHOT_GUARD" modules/juce_gui_basics/native/juce_Windowing_mac.mm; then
+            echo "JUCE patch already applied"
+          else
+            git apply --ignore-whitespace "$GITHUB_WORKSPACE/patches/juce-7.0.12-macos15-sdk.patch"
+          fi
 
       - name: Configure
         run: |

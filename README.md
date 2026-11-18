@@ -118,8 +118,10 @@ Release assets:
 | `SHA256SUMS` | Combined checksums |
 
 The Linux job runs in an `ubuntu:22.04` container (glibc 2.35 floor) with JUCE
-7.0.12 and ccache; the Windows job uses MSVC 2022; the macOS job builds a
-universal arm64/x86_64 bundle. Only real `v*` tags publish a release. macOS
+7.0.12 and ccache; the Windows job uses the installed MSVC generator; the macOS
+job builds a universal arm64/x86_64 bundle. macOS builds with the macOS 15+ SDK
+apply [`patches/juce-7.0.12-macos15-sdk.patch`](patches/juce-7.0.12-macos15-sdk.patch)
+to JUCE 7.0.12 (CI does this automatically). Only real `v*` tags publish a release. macOS
 artifacts are ad-hoc signed but not notarized, so use right-click -> Open on the
 first launch. The Windows app and plugin use the Visual C++ 2015-2022 runtime,
 which is normally present on Windows 10/11.

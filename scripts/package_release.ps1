@@ -26,6 +26,7 @@ Copy-Item -Recurse (Join-Path $root "presets") $vst3Root
 foreach ($file in @("README.md", "NOTICE.md", "LICENSE", "packaging/INSTALL.txt")) {
     Copy-Item (Join-Path $root $file) $vst3Root
 }
+Copy-Item -Recurse (Join-Path $root "LICENSES") $vst3Root
 New-Item -ItemType Directory -Force -Path (Join-Path $vst3Root "docs") | Out-Null
 Copy-Item (Join-Path $root "docs/concepts.md") (Join-Path $vst3Root "docs")
 
@@ -41,6 +42,7 @@ Copy-Item -Recurse (Join-Path $root "presets") $studioRoot
 foreach ($file in @("README.md", "NOTICE.md", "LICENSE", "packaging/INSTALL.txt")) {
     Copy-Item (Join-Path $root $file) $studioRoot
 }
+Copy-Item -Recurse (Join-Path $root "LICENSES") $studioRoot
 New-Item -ItemType Directory -Force -Path (Join-Path $studioRoot "docs") | Out-Null
 Copy-Item (Join-Path $root "docs/concepts.md") (Join-Path $studioRoot "docs")
 

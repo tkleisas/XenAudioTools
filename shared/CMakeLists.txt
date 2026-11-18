@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT OR GPL-3.0-or-later
 add_library(xen_engine STATIC src/engine.cpp src/serialize.cpp)
 target_link_libraries(xen_engine PUBLIC xen)
 target_include_directories(xen_engine PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)

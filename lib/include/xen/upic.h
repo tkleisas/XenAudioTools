@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: MIT OR GPL-3.0-or-later
 // Copyright (C) 2026 bokontep
 //
 // UPIC-style graphical score model, Formalized Music appendix III.

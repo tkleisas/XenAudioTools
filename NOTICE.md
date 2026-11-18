@@ -1,7 +1,12 @@
 # Notice and attribution
 
 XenAudioTools / Xenakis UPIC / Xenakis UPIC Studio
-Copyright © 2026 bokontep. Licensed under GPL-3.0-or-later (see `LICENSE`).
+Copyright © 2026 bokontep.
+
+The **core library and engine** (`lib/` and `shared/`) are dual-licensed under
+**MIT OR GPL-3.0-or-later** (see `LICENSES/MIT.txt`). The VST3 instrument,
+standalone app, editor UI, tools, tests, presets, and documentation are
+**GPL-3.0-or-later** (see `LICENSE`).
 
 ## Conceptual sources
 

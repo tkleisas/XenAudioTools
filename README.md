@@ -209,8 +209,13 @@ bit-exact clone of any specific historical program.
 
 ## Licence and attribution
 
-The suite is **GPL-3.0-or-later**, copyright © 2026 bokontep. JUCE 7 and the VST3
-SDK are GPLv3. See [`LICENSE`](LICENSE) and [`NOTICE.md`](NOTICE.md).
+The **core library and engine** (`lib/` and `shared/`) are dual-licensed under
+**MIT OR GPL-3.0-or-later**; see [`LICENSES/MIT.txt`](LICENSES/MIT.txt). This lets
+MIT hosts such as VWaveEditor and YAWN embed the engine under the MIT option.
+
+The VST3 instrument, standalone app, editor UI, tools, tests, presets, and
+documentation are **GPL-3.0-or-later**, copyright © 2026 bokontep. JUCE 7 and the
+VST3 SDK are GPLv3. See [`LICENSE`](LICENSE) and [`NOTICE.md`](NOTICE.md).
 
 This is an independent project. It is not affiliated with the Xenakis estate,
 CEMAMu, Steinberg, or any hardware manufacturer. The local PDF of *Formalized

@@ -6,7 +6,7 @@ the **UPIC** graphical score idea.
 
 [Latest release](https://github.com/tkleisas/XenAudioTools/releases/latest)
 
-The suite is three things sharing one engine:
+The suite is four things sharing one engine:
 
 - **`lib/`** — a header-only C++17 library (`xen`) implementing sieves, dynamic
   stochastic synthesis (GENDYN), Markov chains, stochastic clouds, game-theoretic
@@ -15,6 +15,9 @@ The suite is three things sharing one engine:
   hosts, with a drawn-arc score editor and generator panels for every concept.
 - **`app/`** — **Xenakis UPIC Studio**, a standalone JUCE application that uses the
   same engine and the same editor without a DAW.
+- **`android/`** — **UPIC Studio for Android**, a native C++/AAudio engine with a
+  Kotlin Jetpack Compose score editor and generators. See
+  [`android/README.md`](android/README.md).
 
 Eight playable `.xenpage` presets are in [`presets/`](presets/).
 
@@ -53,6 +56,7 @@ XenAudioTools/
 ├── ui/                     shared JUCE editor (score canvas + panels)
 ├── vst3/                   Xenakis UPIC VST3 instrument
 ├── app/                    Xenakis UPIC Studio standalone app
+├── android/                UPIC Studio Android app (Compose + AAudio)
 ├── tools/                  xen_presets preset generator
 ├── tests/                  self-contained unit + render tests
 ├── presets/                generated .xenpage examples
@@ -92,6 +96,18 @@ Options:
 | `XEN_BUILD_APP` | `ON` | Build the standalone app |
 | `XEN_BUILD_TESTS` | `ON` | Build and register unit tests |
 | `XEN_BUILD_TOOLS` | `ON` | Build `xen_presets` |
+
+### Android
+
+The Android app lives in [`android/`](android/README.md) and does not use JUCE.
+It needs Android SDK 36, NDK `27.2.12479018`, and JDK 17+:
+
+```bash
+cd android
+export JAVA_HOME=/path/to/android-studio/jbr
+export ANDROID_HOME=$HOME/Android/Sdk
+./gradlew :app:assembleDebug
+```
 
 ## Releases and versioning
 

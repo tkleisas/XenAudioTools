@@ -5,8 +5,8 @@ Copyright © 2026 bokontep.
 
 The **core library and engine** (`lib/` and `shared/`) are dual-licensed under
 **MIT OR GPL-3.0-or-later** (see `LICENSES/MIT.txt`). The VST3 instrument,
-standalone app, editor UI, tools, tests, presets, and documentation are
-**GPL-3.0-or-later** (see `LICENSE`).
+standalone app, Android app, editor UI, tools, tests, presets, and documentation
+are **GPL-3.0-or-later** (see `LICENSE`).
 
 ## Conceptual sources
 
@@ -35,6 +35,12 @@ personal reference and is not redistributed by this project.
   distributed inside JUCE and is used here under the GPLv3 option.
 - **VST** is a trademark of Steinberg Media Technologies GmbH. **VST3** is used
   descriptively.
+- **AndroidX / Jetpack Compose** — © The Android Open Source Project, Apache
+  License 2.0. Used by the Android app.
+- **Android NDK / AAudio** — © The Android Open Source Project, Apache License
+  2.0. Native Android audio output uses AAudio.
+- **Gradle wrapper** — © Gradle Inc., Apache License 2.0. The wrapper JAR is
+  included to make the Android build reproducible.
 
 The MPC Plugin SDK is not used by this project. The ANS 1964 and Polivoks 1982
 projects are separate works with their own notices.

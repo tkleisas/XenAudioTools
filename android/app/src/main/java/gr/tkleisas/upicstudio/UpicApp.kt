@@ -11,6 +11,8 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -523,23 +525,43 @@ fun UpicApp() {
             )
         },
     ) { padding ->
-        Column(
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
         ) {
-            ScoreCanvas(
-                state = state,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1.05f),
-            )
-            ControlsPanel(
-                state = state,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1.15f),
-            )
+            val wide = maxWidth >= 700.dp
+            if (wide) {
+                Row(modifier = Modifier.fillMaxSize()) {
+                    ScoreCanvas(
+                        state = state,
+                        modifier = Modifier
+                            .weight(1.25f)
+                            .fillMaxHeight(),
+                    )
+                    ControlsPanel(
+                        state = state,
+                        modifier = Modifier
+                            .weight(0.85f)
+                            .fillMaxHeight(),
+                    )
+                }
+            } else {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    ScoreCanvas(
+                        state = state,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1.05f),
+                    )
+                    ControlsPanel(
+                        state = state,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1.15f),
+                    )
+                }
+            }
         }
     }
 }

@@ -56,6 +56,27 @@ The APK is written to `app/build/outputs/apk/debug/app-debug.apk`. It contains
 
 Android Studio: open this `android/` directory as a project.
 
+## Play Store release
+
+The release process is documented in [`RELEASING.md`](RELEASING.md). It covers
+upload-key creation, GitHub signing secrets, signed AAB builds, Play Console
+setup, Data safety answers, the privacy policy, and the `Android Release`
+workflow.
+
+```bash
+android/scripts/set_version.sh 2 0.1.1
+android/scripts/build_release.sh
+```
+
+Release outputs:
+
+- `app/build/outputs/bundle/release/app-release.aab`
+- `app/build/outputs/apk/release/app-release.apk`
+- `app/build/outputs/mapping/release/mapping.txt`
+
+Store metadata and graphics are under
+[`fastlane/metadata/android/en-US/`](fastlane/metadata/android/en-US/).
+
 ## Current limitations
 
 - Single UPIC page; no project/track model.

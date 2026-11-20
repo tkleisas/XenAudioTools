@@ -1,0 +1,18 @@
+UPIC Studio is a mobile composition instrument built on the musical ideas of Iannis Xenakis.
+
+Draw freehand UPIC arcs, generate scores with sieves, Markov chains, stochastic clouds, or game-theoretic strategy, and hear the page immediately through a GENDYN-powered synthesis engine. The same header-only C++ algorithms used by the Xenakis Tools desktop and VST3 editions run natively on Android.
+
+FEATURES
+
+• UPIC score canvas — draw, select, and erase arcs; edit weight, waveform, group, and mute state.
+• Four generators — Sieve, Markov, Cloud, and Strategy pages with adjustable range, seed, density, and length.
+• Dynamic stochastic synthesis — shape GENDYN segments, distributions, amplitude steps, and barriers.
+• Live GENDYN notes — hold the on-screen keys to audition stochastic voices.
+• Immediate playback — looping transport, speed control, and master gain.
+• Portable scores — open and save .xenpage files through Android's document picker. The format is shared with the desktop and VST3 editions.
+
+NO ACCOUNTS. NO ADS. NO TRACKING.
+
+UPIC Studio works offline. It does not request network access, microphone access, or any runtime permission. Scores are read and written only when you choose a file.
+
+UPIC refers to the historical CEMAMu graphical composition system. This is an independent project, not affiliated with or endorsed by the Xenakis estate or CEMAMu.

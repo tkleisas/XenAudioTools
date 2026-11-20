@@ -1,0 +1,1 @@
+Initial release: UPIC arc drawing, Sieve/Markov/Cloud/Strategy generators, native GENDYN playback, live note strip, and .xenpage import/export.

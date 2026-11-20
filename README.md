@@ -100,7 +100,9 @@ Options:
 ### Android
 
 The Android app lives in [`android/`](android/README.md) and does not use JUCE.
-It needs Android SDK 36, NDK `27.2.12479018`, and JDK 17+:
+It needs Android SDK 36, NDK `27.2.12479018`, and JDK 17+. The Play Store
+release process, signing setup, store metadata, and privacy policy are in
+[`android/RELEASING.md`](android/RELEASING.md).
 
 ```bash
 cd android

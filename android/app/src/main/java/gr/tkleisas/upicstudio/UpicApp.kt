@@ -27,11 +27,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -616,34 +618,23 @@ fun UpicApp() {
         containerColor = Background,
         contentWindowInsets = WindowInsets.safeDrawing,
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text("UPIC Studio", fontWeight = FontWeight.Bold)
-                        Text(
-                            state.page.name,
-                            fontSize = 11.sp,
-                            color = TextDim,
-                        )
-                    }
+            UpicToolbar(
+                state = state,
+                controlsOpen = controlsOpen,
+                onOpen = {
+                    openLauncher.launch(
+                        arrayOf("application/x-xenpage", "text/plain",
+                            "application/octet-stream"),
+                    )
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Background,
-                    titleContentColor = Color(0xFFD8E4E7),
-                ),
-                actions = {
-                    TextButton(onClick = {
-                        openLauncher.launch(
-                            arrayOf("application/x-xenpage", "text/plain",
-                                "application/octet-stream"),
-                        )
-                    }) { Text("Open") }
-                    TextButton(onClick = {
-                        saveLauncher.launch(
-                            "${state.page.name.ifBlank { "upic" }}.xenpage",
-                        )
-                    }) { Text("Save") }
+                onSave = {
+                    saveLauncher.launch(
+                        "${state.page.name.ifBlank { "upic" }}.xenpage",
+                    )
                 },
+                onPrograms = { showPrograms = true },
+                onArcs = { showArcs = true },
+                onControls = { controlsOpen = !controlsOpen },
             )
         },
     ) { padding ->
@@ -653,23 +644,10 @@ fun UpicApp() {
                 .padding(padding),
         ) {
             val wide = maxWidth > maxHeight
-            val quickBarHeight = 54.dp
             ScoreCanvas(
                 state = state,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(bottom = if (controlsOpen) 0.dp
-                    else quickBarHeight),
+                modifier = Modifier.fillMaxSize(),
             )
-            if (!controlsOpen) {
-                QuickBar(
-                    state = state,
-                    onPrograms = { showPrograms = true },
-                    onArcs = { showArcs = true },
-                    onControls = { controlsOpen = true },
-                    modifier = Modifier.align(Alignment.BottomCenter),
-                )
-            }
             AnimatedVisibility(
                 visible = controlsOpen,
                 enter = if (wide) {
@@ -729,6 +707,81 @@ fun UpicApp() {
 }
 
 @Composable
+private fun UpicToolbar(
+    state: UpicState,
+    controlsOpen: Boolean,
+    onOpen: () -> Unit,
+    onSave: () -> Unit,
+    onPrograms: () -> Unit,
+    onArcs: () -> Unit,
+    onControls: () -> Unit,
+) {
+    Surface(color = Background) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .windowInsetsPadding(WindowInsets.statusBars)
+                .padding(horizontal = 8.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.padding(end = 8.dp)) {
+                Text(
+                    "UPIC Studio",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
+                    maxLines = 1,
+                )
+                Text(
+                    state.page.name,
+                    fontSize = 9.sp,
+                    color = TextDim,
+                    maxLines = 1,
+                )
+            }
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .horizontalScroll(rememberScrollState()),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                UpicTool.entries.forEach { tool ->
+                    FilterChip(
+                        selected = state.tool == tool,
+                        onClick = { state.tool = tool },
+                        label = { Text(tool.label, fontSize = 9.sp) },
+                    )
+                }
+                ToolbarButton("−") { state.zoomView(1f / 1.35f) }
+                ToolbarButton("+") { state.zoomView(1.35f) }
+                ToolbarButton("Fit") { state.fitView() }
+                ToolbarButton(if (state.playing) "Stop" else "Play") {
+                    state.togglePlay()
+                }
+                ToolbarButton("Arcs") { onArcs() }
+                ToolbarButton("Programs") { onPrograms() }
+                ToolbarButton("Open") { onOpen() }
+                ToolbarButton("Save") { onSave() }
+                ToolbarButton(if (controlsOpen) "Hide" else "Controls") {
+                    onControls()
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ToolbarButton(label: String, onClick: () -> Unit) {
+    TextButton(
+        onClick = onClick,
+        contentPadding = PaddingValues(horizontal = 6.dp),
+        modifier = Modifier.height(30.dp),
+    ) {
+        Text(label, fontSize = 10.sp, maxLines = 1)
+    }
+}
+
+@Composable
 private fun ScoreCanvas(state: UpicState, modifier: Modifier = Modifier) {
     val density = LocalDensity.current
     val labelPaint = remember {
@@ -740,46 +793,10 @@ private fun ScoreCanvas(state: UpicState, modifier: Modifier = Modifier) {
     val labelSize = with(density) { 10.sp.toPx() }
     val duration = max(0.1, state.page.duration)
 
-    Column(
+    Canvas(
         modifier = modifier
-            .background(Background)
-            .padding(horizontal = 10.dp, vertical = 4.dp),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            UpicTool.entries.forEach { tool ->
-                FilterChip(
-                    selected = state.tool == tool,
-                    onClick = { state.tool = tool },
-                    label = { Text(tool.label, fontSize = 11.sp) },
-                )
-            }
-            Spacer(Modifier.weight(1f))
-            TextButton(
-                onClick = { state.zoomView(1f / 1.35f) },
-                contentPadding = PaddingValues(horizontal = 6.dp),
-                modifier = Modifier.height(32.dp),
-            ) { Text("−", fontSize = 18.sp) }
-            TextButton(
-                onClick = { state.zoomView(1.35f) },
-                contentPadding = PaddingValues(horizontal = 6.dp),
-                modifier = Modifier.height(32.dp),
-            ) { Text("+", fontSize = 18.sp) }
-            TextButton(
-                onClick = { state.fitView() },
-                contentPadding = PaddingValues(horizontal = 6.dp),
-                modifier = Modifier.height(32.dp),
-            ) { Text("Fit", fontSize = 11.sp) }
-        }
-
-        Canvas(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Panel)
-                .pointerInput(state.tool, state.revision) {
+            .background(Panel)
+            .pointerInput(state.tool, state.revision) {
                     val width = size.width.toFloat().coerceAtLeast(1f)
                     val height = size.height.toFloat().coerceAtLeast(1f)
                     val touchSlop = viewConfiguration.touchSlop
@@ -963,7 +980,6 @@ private fun ScoreCanvas(state: UpicState, modifier: Modifier = Modifier) {
                 Color(0xFF2D525E),
                 style = Stroke(width = 1f),
             )
-        }
     }
 }
 
@@ -1064,61 +1080,6 @@ private fun ControlsPanel(
             fontSize = 10.sp,
             modifier = Modifier.padding(vertical = 6.dp),
         )
-    }
-}
-
-@Composable
-private fun QuickBar(
-    state: UpicState,
-    onPrograms: () -> Unit,
-    onArcs: () -> Unit,
-    onControls: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Surface(
-        color = Panel,
-        tonalElevation = 4.dp,
-        modifier = modifier
-            .fillMaxWidth()
-            .height(54.dp),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Button(
-                onClick = { state.togglePlay() },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (state.playing) Amber else Accent,
-                    contentColor = Background,
-                ),
-                contentPadding = PaddingValues(horizontal = 14.dp),
-                modifier = Modifier.height(38.dp),
-            ) {
-                Text(if (state.playing) "Stop" else "Play", fontSize = 12.sp)
-            }
-            Text(
-                String.format(Locale.US, "%.2f s", state.playhead),
-                color = TextDim,
-                fontSize = 10.sp,
-            )
-            Spacer(Modifier.weight(1f))
-            TextButton(
-                onClick = onArcs,
-                contentPadding = PaddingValues(horizontal = 6.dp),
-            ) { Text("Arcs", fontSize = 11.sp) }
-            TextButton(
-                onClick = onPrograms,
-                contentPadding = PaddingValues(horizontal = 6.dp),
-            ) { Text("Programs", fontSize = 11.sp) }
-            TextButton(
-                onClick = onControls,
-                contentPadding = PaddingValues(horizontal = 6.dp),
-            ) { Text("Controls", fontSize = 11.sp) }
-        }
     }
 }
 

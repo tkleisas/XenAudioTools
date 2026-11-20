@@ -11,7 +11,7 @@ FEATURES
 • Dynamic stochastic synthesis — shape GENDYN segments, distributions, amplitude steps, and barriers.
 • Live GENDYN notes — hold the on-screen keys to audition stochastic voices.
 • Immediate playback — looping transport, speed control, and master gain.
-• Landscape-first workspace — the score fills the screen, with a collapsible side control panel that slides over it when needed.
+• Landscape-only workspace — every tool, transport action, zoom control, and file action shares a single compact top line, leaving almost the entire screen for the score. A collapsible side panel holds the deeper controls.
 • Portable scores — open and save .xenpage files through Android's document picker. The format is shared with the desktop and VST3 editions.
 
 NO ACCOUNTS. NO ADS. NO TRACKING.

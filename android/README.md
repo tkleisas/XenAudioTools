@@ -6,8 +6,10 @@ the UI is Kotlin + Jetpack Compose.
 
 ![UPIC Studio for Android](docs/screenshot.png)
 
-UPIC Studio is landscape-only. The score fills the screen; the control panel
-slides in from the right over the score and can be hidden at any time.
+UPIC Studio is landscape-only. All score tools, transport, zoom, programs, and
+file actions share a single compact top line beside the title. The score fills
+the rest of the screen; the control panel slides in from the right over it and
+can be hidden at any time.
 
 ## Features
 
@@ -18,7 +20,8 @@ slides in from the right over the score and can be hidden at any time.
 - Edit arc weight, waveform, group, and mute state.
 - Load eight built-in UPIC programs, save edited programs to app storage, and
   keep the current page automatically between launches.
-- Landscape-first workspace with a collapsible side control panel.
+- Landscape-only workspace with all quick actions on one top line and a
+  collapsible side control panel.
 - Loop playback with adjustable speed and master gain.
 - Live GENDYN note strip (C3–C4) for auditioning stochastic voices.
 - GENDYN controls: segments, distribution, amplitude step/barrier, mirror.

@@ -23,7 +23,7 @@ Use the Fastlane metadata in `../fastlane/metadata/android/en-US/`.
 - **Feature graphic:** 1024×500 `images/featureGraphic.png`
 - **Phone screenshots:** two 1920×1080 landscape captures in
   `images/phoneScreenshots/` showing the single-line toolbar with full-screen
-  canvas and the collapsible side control panel.
+  canvas and the exact frequency/time range controls.
 
 ## App content
 

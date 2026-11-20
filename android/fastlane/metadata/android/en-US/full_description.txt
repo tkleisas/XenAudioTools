@@ -6,6 +6,7 @@ FEATURES
 
 • UPIC score canvas — draw, select, and erase arcs; pinch to zoom and drag to pan.
 • Arc browser — find, select, deselect, or delete any arc from a list.
+• Precise view ranges — type exact bottom/top frequencies and start/time span, or fit the whole page. New pages span roughly 33 Hz to 20 kHz.
 • Program library — load eight built-in pages, save your own programs, and resume your current page automatically.
 • Four generators — Sieve, Markov, Cloud, and Strategy pages with adjustable range, seed, density, and length.
 • Dynamic stochastic synthesis — shape GENDYN segments, distributions, amplitude steps, and barriers.

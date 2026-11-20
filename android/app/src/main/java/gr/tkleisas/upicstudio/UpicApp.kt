@@ -14,6 +14,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -27,12 +28,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -47,6 +50,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
@@ -80,6 +84,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
@@ -149,6 +154,7 @@ enum class ControlTab(val label: String) {
     Generate("Generate"),
     Gendyn("GENDYN"),
     Edit("Edit"),
+    View("View"),
 }
 
 private val WaveformNames = listOf("Sine", "Saw", "Square", "Triangle", "GENDYN")
@@ -171,8 +177,8 @@ class UpicState {
 
     var generator by mutableStateOf(GeneratorType.Sieve)
     var duration by mutableFloatStateOf(16f)
-    var lowIndex by mutableIntStateOf(36)
-    var highIndex by mutableIntStateOf(96)
+    var lowIndex by mutableIntStateOf(24)
+    var highIndex by mutableIntStateOf(135)
     var seed by mutableLongStateOf(1964L)
     var waveform by mutableIntStateOf(4)
     var sievePreset by mutableIntStateOf(0)
@@ -265,6 +271,31 @@ class UpicState {
         clampView()
     }
 
+    fun setViewBounds(
+        startSeconds: Double,
+        spanSeconds: Double,
+        bottomHz: Double,
+        topHz: Double,
+    ) {
+        val duration = max(0.1, page.duration).toFloat()
+        val newSpan = spanSeconds.toFloat().coerceIn(0.05f, duration)
+        timeSpan = newSpan
+        timeStart = startSeconds.toFloat()
+            .coerceIn(0f, max(0f, duration - newSpan))
+
+        var low = page.table.hzToNorm(bottomHz)
+        var high = page.table.hzToNorm(topHz)
+        if (high < low) {
+            val swap = low
+            low = high
+            high = swap
+        }
+        if (high - low < 0.02) high = min(1.0, low + 0.02)
+        pitchLow = low.toFloat()
+        pitchHigh = high.toFloat()
+        clampView()
+    }
+
     private fun clampView() {
         val duration = max(0.1, page.duration).toFloat()
         timeSpan = timeSpan.coerceIn(0.05f, duration)
@@ -287,7 +318,7 @@ class UpicState {
 
     fun generate() {
         if (highIndex <= lowIndex) {
-            highIndex = min(127, lowIndex + 1)
+            highIndex = min(135, lowIndex + 1)
         }
         val text = UpicEngine.nativeGeneratePage(
             generator.ordinal,
@@ -721,6 +752,7 @@ private fun UpicToolbar(
             modifier = Modifier
                 .fillMaxWidth()
                 .windowInsetsPadding(WindowInsets.statusBars)
+                .windowInsetsPadding(WindowInsets.navigationBars)
                 .padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -746,38 +778,58 @@ private fun UpicToolbar(
                 horizontalArrangement = Arrangement.spacedBy(2.dp),
             ) {
                 UpicTool.entries.forEach { tool ->
-                    FilterChip(
-                        selected = state.tool == tool,
-                        onClick = { state.tool = tool },
-                        label = { Text(tool.label, fontSize = 9.sp) },
-                    )
+                    ToolbarButton(
+                        label = tool.label,
+                        active = state.tool == tool,
+                    ) { state.tool = tool }
                 }
                 ToolbarButton("−") { state.zoomView(1f / 1.35f) }
                 ToolbarButton("+") { state.zoomView(1.35f) }
-                ToolbarButton("Fit") { state.fitView() }
-                ToolbarButton(if (state.playing) "Stop" else "Play") {
-                    state.togglePlay()
+                ToolbarButton("Fit") {
+                    state.fitView()
+                    state.status = "View fitted to page"
                 }
+                ToolbarButton(
+                    label = if (state.playing) "Stop" else "Play",
+                    active = state.playing,
+                ) { state.togglePlay() }
                 ToolbarButton("Arcs") { onArcs() }
                 ToolbarButton("Programs") { onPrograms() }
+                ToolbarButton(
+                    label = if (controlsOpen) "Hide" else "Controls",
+                    active = controlsOpen,
+                ) { onControls() }
                 ToolbarButton("Open") { onOpen() }
                 ToolbarButton("Save") { onSave() }
-                ToolbarButton(if (controlsOpen) "Hide" else "Controls") {
-                    onControls()
-                }
             }
         }
     }
 }
 
 @Composable
-private fun ToolbarButton(label: String, onClick: () -> Unit) {
-    TextButton(
-        onClick = onClick,
-        contentPadding = PaddingValues(horizontal = 6.dp),
-        modifier = Modifier.height(30.dp),
+private fun ToolbarButton(
+    label: String,
+    active: Boolean = false,
+    onClick: () -> Unit,
+) {
+    Surface(
+        color = if (active) PanelRaised else Color.Transparent,
+        shape = MaterialTheme.shapes.extraSmall,
+        modifier = Modifier
+            .height(30.dp)
+            .clickable(onClick = onClick),
     ) {
-        Text(label, fontSize = 10.sp, maxLines = 1)
+        Box(
+            modifier = Modifier.padding(horizontal = 5.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                label,
+                fontSize = 9.sp,
+                maxLines = 1,
+                color = if (active) Color.White else TextDim,
+            )
+        }
     }
 }
 
@@ -996,6 +1048,7 @@ private fun ControlsPanel(
     state.revision // observe page mutations
     Column(
         modifier = modifier
+            .windowInsetsPadding(WindowInsets.navigationBars)
             .background(PanelRaised)
             .padding(horizontal = 12.dp),
     ) {
@@ -1005,14 +1058,14 @@ private fun ControlsPanel(
                 .padding(top = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            TextButton(onClick = onClose) { Text("← Hide") }
             Text(
                 "Controls",
                 fontWeight = FontWeight.Bold,
                 fontSize = 16.sp,
             )
-            Spacer(Modifier.weight(1f))
+            Spacer(Modifier.width(8.dp))
             TextButton(onClick = onPrograms) { Text("Programs") }
-            TextButton(onClick = onClose) { Text("Hide") }
         }
         Row(
             modifier = Modifier
@@ -1071,6 +1124,9 @@ private fun ControlsPanel(
                         }
                     }
                 }
+                ControlTab.View -> {
+                    item { ViewRangeCard(state) }
+                }
             }
             item { Spacer(Modifier.height(8.dp)) }
         }
@@ -1079,6 +1135,114 @@ private fun ControlsPanel(
             color = TextDim,
             fontSize = 10.sp,
             modifier = Modifier.padding(vertical = 6.dp),
+        )
+    }
+}
+
+@Composable
+private fun ViewRangeCard(state: UpicState) {
+    val table = state.page.table
+    val bottomHz = table.normToHz(state.pitchLow.toDouble())
+    val topHz = table.normToHz(state.pitchHigh.toDouble())
+    var bottomText by remember(bottomHz) {
+        mutableStateOf(String.format(Locale.US, "%.1f", bottomHz))
+    }
+    var topText by remember(topHz) {
+        mutableStateOf(String.format(Locale.US, "%.1f", topHz))
+    }
+    var startText by remember(state.timeStart) {
+        mutableStateOf(String.format(Locale.US, "%.3f", state.timeStart))
+    }
+    var spanText by remember(state.timeSpan) {
+        mutableStateOf(String.format(Locale.US, "%.3f", state.timeSpan))
+    }
+
+    UpicCard("VIEW RANGE") {
+        Text(
+            "Set the exact visible band and time window. " +
+                "The canvas updates immediately.",
+            color = TextDim,
+            fontSize = 10.sp,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedTextField(
+                value = bottomText,
+                onValueChange = { bottomText = it },
+                label = { Text("Bottom Hz") },
+                singleLine = true,
+                keyboardOptions =
+                    KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                modifier = Modifier.weight(1f),
+            )
+            OutlinedTextField(
+                value = topText,
+                onValueChange = { topText = it },
+                label = { Text("Top Hz") },
+                singleLine = true,
+                keyboardOptions =
+                    KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                modifier = Modifier.weight(1f),
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedTextField(
+                value = startText,
+                onValueChange = { startText = it },
+                label = { Text("Start s") },
+                singleLine = true,
+                keyboardOptions =
+                    KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                modifier = Modifier.weight(1f),
+            )
+            OutlinedTextField(
+                value = spanText,
+                onValueChange = { spanText = it },
+                label = { Text("Span s") },
+                singleLine = true,
+                keyboardOptions =
+                    KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                modifier = Modifier.weight(1f),
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(
+                onClick = {
+                    val bottom = bottomText.toDoubleOrNull()
+                    val top = topText.toDoubleOrNull()
+                    val start = startText.toDoubleOrNull()
+                    val span = spanText.toDoubleOrNull()
+                    if (bottom == null || top == null ||
+                        start == null || span == null || span <= 0.0) {
+                        state.status = "Enter valid Hz and time values"
+                    } else {
+                        state.setViewBounds(start, span, bottom, top)
+                        state.status = String.format(
+                            Locale.US,
+                            "View %.1f–%.1f Hz · %.2f–%.2f s",
+                            table.normToHz(state.pitchLow.toDouble()),
+                            table.normToHz(state.pitchHigh.toDouble()),
+                            state.timeStart,
+                            state.timeStart + state.timeSpan,
+                        )
+                    }
+                },
+            ) { Text("Apply") }
+            OutlinedButton(onClick = {
+                state.fitView()
+                state.status = "View fitted to page"
+            }) { Text("Fit page") }
+        }
+        Text(
+            String.format(
+                Locale.US,
+                "Now: %.1f–%.1f Hz · %.2f–%.2f s",
+                bottomHz,
+                topHz,
+                state.timeStart,
+                state.timeStart + state.timeSpan,
+            ),
+            color = Color(0xFF4EC9B0),
+            fontSize = 10.sp,
         )
     }
 }
@@ -1244,7 +1408,7 @@ private fun GeneratorCard(state: UpicState) {
             "Low index",
             state.lowIndex.toString(),
             state.lowIndex.toFloat(),
-            0f..127f,
+            0f..134f,
         ) {
             state.lowIndex = it.roundToInt().coerceAtMost(state.highIndex - 1)
         }
@@ -1252,7 +1416,7 @@ private fun GeneratorCard(state: UpicState) {
             "High index",
             state.highIndex.toString(),
             state.highIndex.toFloat(),
-            1f..127f,
+            1f..135f,
         ) {
             state.highIndex = it.roundToInt().coerceAtLeast(state.lowIndex + 1)
         }

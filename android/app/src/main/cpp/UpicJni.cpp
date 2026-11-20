@@ -84,8 +84,8 @@ xen::Page buildPage(int generator, double duration, int lowIndex,
     page.envelopes.front() = xen::Envelope::ad(0.004f, 0.05f);
     page.frequencyTables.front().tuning = equalTemperament();
 
-    const int low = std::clamp(lowIndex, 0, 126);
-    const int high = std::clamp(highIndex, low + 1, 127);
+    const int low = std::clamp(lowIndex, 0, 134);
+    const int high = std::clamp(highIndex, low + 1, 135);
     const auto wave = static_cast<xen::WaveformType>(
         std::clamp(waveform, 0, 4));
     const xen::Tuning tuning = equalTemperament();

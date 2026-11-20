@@ -16,6 +16,8 @@ can be hidden at any time.
 - Generate pages with **Sieve**, **Markov**, **Cloud**, and **Strategy** models.
 - Draw freehand UPIC arcs with a finger, pinch to zoom the time/pitch view, and
   drag to pan in Select/Erase mode.
+- Set exact visible bounds in the **View** tab: bottom Hz, top Hz, start time,
+  and visible span. New pages default to a 32 Hz–20 kHz range.
 - Browse every arc in a list for reliable selection, deselection, and deletion.
 - Edit arc weight, waveform, group, and mute state.
 - Load eight built-in UPIC programs, save edited programs to app storage, and

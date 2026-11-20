@@ -60,8 +60,8 @@ data class UpicEnvelope(
 data class SieveClass(val modulus: Int, val offset: Int)
 
 data class UpicFrequencyTable(
-    var lowIndex: Double = 36.0,
-    var highIndex: Double = 96.0,
+    var lowIndex: Double = 24.0,
+    var highIndex: Double = 135.0,
     var referenceHz: Double = 8.175798915643707,
     var divisionsPerOctave: Double = 12.0,
     var referenceIndex: Double = 0.0,
@@ -77,6 +77,15 @@ data class UpicFrequencyTable(
 
     fun normToIndex(norm: Double): Double =
         lowIndex + norm.coerceIn(0.0, 1.0) * (highIndex - lowIndex)
+
+    fun hzToNorm(hz: Double): Double {
+        if (hz <= 0.0) return 0.0
+        val index = referenceIndex +
+            divisionsPerOctave * (kotlin.math.ln(hz / referenceHz) /
+                kotlin.math.ln(2.0))
+        return ((index - lowIndex) / max(1e-9, highIndex - lowIndex))
+            .coerceIn(0.0, 1.0)
+    }
 }
 
 data class UpicPage(

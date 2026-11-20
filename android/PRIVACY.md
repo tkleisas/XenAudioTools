@@ -13,12 +13,16 @@ The app has no user accounts, no advertising, no analytics SDKs, and no network
 permission. It does not request the microphone, location, contacts, camera, or
 any other runtime permission.
 
-## Files you open or save
+## Files and local programs
 
 UPIC Studio reads and writes `.xenpage` files only when you explicitly choose a
 file through Android's system document picker. Those files remain under your
-control and are not uploaded anywhere. The app does not retain a copy outside
-your chosen location.
+control and are not uploaded anywhere.
+
+The app also keeps the current page, plus any programs you save in the program
+library, in its private app storage on your device. This local data never leaves
+the device. It is removed when you uninstall the app; individual saved programs
+can be deleted from the Programs dialog.
 
 ## Diagnostics
 

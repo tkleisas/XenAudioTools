@@ -6,11 +6,19 @@ the UI is Kotlin + Jetpack Compose.
 
 ![UPIC Studio for Android](docs/screenshot.png)
 
+UPIC Studio is landscape-only. The score fills the screen; the control panel
+slides in from the right over the score and can be hidden at any time.
+
 ## Features
 
 - Generate pages with **Sieve**, **Markov**, **Cloud**, and **Strategy** models.
-- Draw freehand UPIC arcs with a finger, select arcs, erase them, and edit
-  weight, waveform, group, and mute state.
+- Draw freehand UPIC arcs with a finger, pinch to zoom the time/pitch view, and
+  drag to pan in Select/Erase mode.
+- Browse every arc in a list for reliable selection, deselection, and deletion.
+- Edit arc weight, waveform, group, and mute state.
+- Load eight built-in UPIC programs, save edited programs to app storage, and
+  keep the current page automatically between launches.
+- Landscape-first workspace with a collapsible side control panel.
 - Loop playback with adjustable speed and master gain.
 - Live GENDYN note strip (C3–C4) for auditioning stochastic voices.
 - GENDYN controls: segments, distribution, amplitude step/barrier, mirror.
@@ -79,8 +87,8 @@ Store metadata and graphics are under
 
 ## Current limitations
 
-- Single UPIC page; no project/track model.
-- Arc drawing uses the full page view; pinch zoom/pan is not implemented yet.
+- One active page at a time, with built-in and saved program slots rather than a
+  multi-track project model.
 - Generators expose a compact parameter subset compared with the desktop app.
 - Playback is AAudio-only; export to WAV and file sharing are future work.
 - Envelope/frequency-table editing is preserved when loading/saving but not

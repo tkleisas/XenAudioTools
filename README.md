@@ -15,9 +15,9 @@ The suite is four things sharing one engine:
   hosts, with a drawn-arc score editor and generator panels for every concept.
 - **`app/`** — **Xenakis UPIC Studio**, a standalone JUCE application that uses the
   same engine and the same editor without a DAW.
-- **`android/`** — **UPIC Studio for Android**, a native C++/AAudio engine with a
-  Kotlin Jetpack Compose score editor and generators. See
-  [`android/README.md`](android/README.md).
+- **`android/`** — **UPIC Studio for Android**, a landscape-first native
+  C++/AAudio engine with a Kotlin Jetpack Compose score editor, program library,
+  and generators. See [`android/README.md`](android/README.md).
 
 Eight playable `.xenpage` presets are in [`presets/`](presets/).
 

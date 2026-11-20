@@ -4,11 +4,14 @@ Draw freehand UPIC arcs, generate scores with sieves, Markov chains, stochastic 
 
 FEATURES
 
-• UPIC score canvas — draw, select, and erase arcs; edit weight, waveform, group, and mute state.
+• UPIC score canvas — draw, select, and erase arcs; pinch to zoom and drag to pan.
+• Arc browser — find, select, deselect, or delete any arc from a list.
+• Program library — load eight built-in pages, save your own programs, and resume your current page automatically.
 • Four generators — Sieve, Markov, Cloud, and Strategy pages with adjustable range, seed, density, and length.
 • Dynamic stochastic synthesis — shape GENDYN segments, distributions, amplitude steps, and barriers.
 • Live GENDYN notes — hold the on-screen keys to audition stochastic voices.
 • Immediate playback — looping transport, speed control, and master gain.
+• Landscape-first workspace — the score fills the screen, with a collapsible side control panel that slides over it when needed.
 • Portable scores — open and save .xenpage files through Android's document picker. The format is shared with the desktop and VST3 editions.
 
 NO ACCOUNTS. NO ADS. NO TRACKING.

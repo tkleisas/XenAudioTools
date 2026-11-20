@@ -21,7 +21,9 @@ Use the Fastlane metadata in `../fastlane/metadata/android/en-US/`.
 - **Full description:** see `full_description.txt`.
 - **App icon:** 512×512 `images/icon.png`
 - **Feature graphic:** 1024×500 `images/featureGraphic.png`
-- **Phone screenshots:** two 1080×1920 captures in `images/phoneScreenshots/`.
+- **Phone screenshots:** two 1920×1080 landscape captures in
+  `images/phoneScreenshots/` showing the full-screen canvas and the side
+  generator panel.
 
 ## App content
 

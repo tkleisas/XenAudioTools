@@ -2,11 +2,20 @@
 package gr.tkleisas.upicstudio
 
 import android.graphics.Paint
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -15,6 +24,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -79,6 +89,7 @@ import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
+import kotlin.math.sqrt
 
 private val Background = Color(0xFF071116)
 private val Panel = Color(0xFF0E1D24)
@@ -131,6 +142,13 @@ enum class GeneratorType(val label: String) {
     Strategy("Strategy"),
 }
 
+enum class ControlTab(val label: String) {
+    Transport("Play"),
+    Generate("Generate"),
+    Gendyn("GENDYN"),
+    Edit("Edit"),
+}
+
 private val WaveformNames = listOf("Sine", "Saw", "Square", "Triangle", "GENDYN")
 private val SievePresetNames =
     listOf("Diatonic", "Chromatic", "Whole", "Messiaen", "Triad", "Octatonic")
@@ -143,6 +161,11 @@ class UpicState {
     var selectedArc by mutableIntStateOf(-1)
     var tool by mutableStateOf(UpicTool.Draw)
     var draftPoints by mutableStateOf<List<ArcPoint>>(emptyList())
+
+    var timeStart by mutableFloatStateOf(0f)
+    var timeSpan by mutableFloatStateOf(16f)
+    var pitchLow by mutableFloatStateOf(0f)
+    var pitchHigh by mutableFloatStateOf(1f)
 
     var generator by mutableStateOf(GeneratorType.Sieve)
     var duration by mutableFloatStateOf(16f)
@@ -183,6 +206,72 @@ class UpicState {
     val undo = mutableStateListOf<String>()
     val canUndo: Boolean get() = undo.isNotEmpty()
 
+    fun fitView() {
+        timeStart = 0f
+        timeSpan = max(0.1, page.duration).toFloat()
+        pitchLow = 0f
+        pitchHigh = 1f
+    }
+
+    fun timeAt(fraction: Float): Double =
+        (timeStart + fraction.coerceIn(0f, 1f) * timeSpan).toDouble()
+
+    fun pitchAt(fraction: Float): Double {
+        val span = max(0.0001f, pitchHigh - pitchLow)
+        return (pitchHigh - fraction.coerceIn(0f, 1f) * span).toDouble()
+    }
+
+    fun xForTime(time: Double, width: Float): Float =
+        ((time - timeStart) / max(0.0001f, timeSpan)).toFloat() * width
+
+    fun yForPitch(pitch: Double, height: Float): Float {
+        val span = max(0.0001f, pitchHigh - pitchLow)
+        return ((pitchHigh - pitch.toFloat()) / span) * height
+    }
+
+    fun zoomView(factor: Float, timeAnchor: Double, pitchAnchor: Double) {
+        val duration = max(0.1, page.duration)
+        val newSpan = (timeSpan / factor).coerceIn(0.05f, duration.toFloat())
+        val timeFraction = ((timeAnchor - timeStart) / max(0.0001f, timeSpan))
+            .coerceIn(0.0, 1.0)
+        timeStart = (timeAnchor - timeFraction * newSpan).toFloat()
+        timeSpan = newSpan
+
+        val oldPitchSpan = max(0.0001f, pitchHigh - pitchLow)
+        val newPitchSpan = (oldPitchSpan / factor).coerceIn(0.02f, 1f)
+        val pitchFraction = ((pitchHigh - pitchAnchor) / oldPitchSpan)
+            .coerceIn(0.0, 1.0)
+        pitchHigh = (pitchAnchor + pitchFraction * newPitchSpan).toFloat()
+        pitchLow = pitchHigh - newPitchSpan
+        clampView()
+    }
+
+    fun zoomView(factor: Float) {
+        zoomView(
+            factor,
+            (timeStart + timeSpan / 2f).toDouble(),
+            ((pitchLow + pitchHigh) / 2f).toDouble(),
+        )
+    }
+
+    fun panView(dx: Float, dy: Float, width: Float, height: Float) {
+        if (width <= 0f || height <= 0f) return
+        val pitchSpan = max(0.0001f, pitchHigh - pitchLow)
+        timeStart -= dx / width * timeSpan
+        pitchLow += dy / height * pitchSpan
+        pitchHigh = pitchLow + pitchSpan
+        clampView()
+    }
+
+    private fun clampView() {
+        val duration = max(0.1, page.duration).toFloat()
+        timeSpan = timeSpan.coerceIn(0.05f, duration)
+        timeStart = timeStart.coerceIn(0f, max(0f, duration - timeSpan))
+        val pitchSpan = (pitchHigh - pitchLow).coerceIn(0.02f, 1f)
+        pitchLow = pitchLow.coerceIn(0f, 1f - pitchSpan)
+        pitchHigh = pitchLow + pitchSpan
+    }
+
     fun snapshot() {
         undo.add(page.toText())
         if (undo.size > 40) undo.removeAt(0)
@@ -218,6 +307,7 @@ class UpicState {
             page = UpicPage.parse(text)
             revision++
             selectedArc = -1
+            fitView()
             playing = false
             UpicEngine.nativeSetTransport(false, loop, speed)
             UpicEngine.nativeSetPlayhead(0.0)
@@ -228,21 +318,24 @@ class UpicState {
         }
     }
 
-    fun loadText(text: String) {
+    fun loadText(text: String): Boolean {
         try {
             val loaded = UpicPage.parse(text)
             snapshot()
             page = loaded
             revision++
             selectedArc = -1
+            fitView()
             playing = false
             UpicEngine.nativeSetTransport(false, loop, speed)
             UpicEngine.nativeSetPlayhead(0.0)
             playhead = 0.0
             syncPage()
             status = "Loaded ${page.name}"
+            return true
         } catch (error: Exception) {
             status = "Open failed: ${error.message}"
+            return false
         }
     }
 
@@ -253,6 +346,7 @@ class UpicState {
             page = UpicPage.parse(text)
             revision++
             selectedArc = -1
+            fitView()
             syncPage()
             status = "Undo"
         } catch (error: Exception) {
@@ -326,15 +420,23 @@ class UpicState {
         }
     }
 
-    fun deleteSelected() {
-        if (selectedArc !in page.arcs.indices) return
+    fun deleteArc(index: Int) {
+        if (index !in page.arcs.indices) return
         snapshot()
-        page.arcs.removeAt(selectedArc)
-        selectedArc = -1
+        page.arcs.removeAt(index)
+        selectedArc = when {
+            selectedArc == index -> -1
+            selectedArc > index -> selectedArc - 1
+            else -> selectedArc
+        }
         revision++
         page.refreshDuration()
         syncPage()
-        status = "Arc deleted"
+        status = "Arc ${index + 1} deleted"
+    }
+
+    fun deleteSelected() {
+        if (selectedArc in page.arcs.indices) deleteArc(selectedArc)
     }
 
     fun updateSelected(block: (UpicArc) -> Unit) {
@@ -408,6 +510,10 @@ fun UpicApp() {
     val state = remember { UpicState() }
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    var showPrograms by remember { mutableStateOf(false) }
+    var showArcs by remember { mutableStateOf(false) }
+    var controlsOpen by remember { mutableStateOf(false) }
+    var controlTab by remember { mutableStateOf(ControlTab.Transport) }
 
     DisposableEffect(Unit) {
         UpicEngine.nativeCreate()
@@ -417,13 +523,17 @@ fun UpicApp() {
             state.applyGains()
             state.applyGendyn()
         }
-        state.generate()
+        val restored = readCurrentPage(context)
+        if (restored == null || !state.loadText(restored)) {
+            state.generate()
+        }
         state.status = if (error == null) {
             "Audio ready · ${state.page.arcs.size} arcs"
         } else {
             error
         }
         onDispose {
+            writeCurrentPage(context, state.page.toText())
             UpicEngine.nativeAllNotesOff()
             UpicEngine.nativeStop()
             UpicEngine.nativeDestroy()
@@ -437,11 +547,19 @@ fun UpicApp() {
         }
     }
 
+    LaunchedEffect(state.revision) {
+        if (state.revision > 0) {
+            delay(500)
+            writeCurrentPage(context, state.page.toText())
+        }
+    }
+
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_STOP -> {
                     state.pauseForBackground()
+                    writeCurrentPage(context, state.page.toText())
                     UpicEngine.nativeStop()
                     state.audioReady = false
                     state.status = "Audio paused"
@@ -490,6 +608,10 @@ fun UpicApp() {
         }.onFailure { state.status = "Save failed: ${it.message}" }
     }
 
+    BackHandler(enabled = controlsOpen && !showPrograms && !showArcs) {
+        controlsOpen = false
+    }
+
     Scaffold(
         containerColor = Background,
         contentWindowInsets = WindowInsets.safeDrawing,
@@ -530,39 +652,79 @@ fun UpicApp() {
                 .fillMaxSize()
                 .padding(padding),
         ) {
-            val wide = maxWidth >= 700.dp
-            if (wide) {
-                Row(modifier = Modifier.fillMaxSize()) {
-                    ScoreCanvas(
-                        state = state,
-                        modifier = Modifier
-                            .weight(1.25f)
-                            .fillMaxHeight(),
-                    )
-                    ControlsPanel(
-                        state = state,
-                        modifier = Modifier
-                            .weight(0.85f)
-                            .fillMaxHeight(),
-                    )
-                }
-            } else {
-                Column(modifier = Modifier.fillMaxSize()) {
-                    ScoreCanvas(
-                        state = state,
-                        modifier = Modifier
+            val wide = maxWidth > maxHeight
+            val quickBarHeight = 54.dp
+            ScoreCanvas(
+                state = state,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(bottom = if (controlsOpen) 0.dp
+                    else quickBarHeight),
+            )
+            if (!controlsOpen) {
+                QuickBar(
+                    state = state,
+                    onPrograms = { showPrograms = true },
+                    onArcs = { showArcs = true },
+                    onControls = { controlsOpen = true },
+                    modifier = Modifier.align(Alignment.BottomCenter),
+                )
+            }
+            AnimatedVisibility(
+                visible = controlsOpen,
+                enter = if (wide) {
+                    slideInHorizontally(initialOffsetX = { it }) + fadeIn()
+                } else {
+                    slideInVertically(initialOffsetY = { it }) + fadeIn()
+                },
+                exit = if (wide) {
+                    slideOutHorizontally(targetOffsetX = { it }) + fadeOut()
+                } else {
+                    slideOutVertically(targetOffsetY = { it }) + fadeOut()
+                },
+                modifier = if (wide) {
+                    Modifier.align(Alignment.CenterEnd)
+                } else {
+                    Modifier.align(Alignment.BottomCenter)
+                },
+            ) {
+                ControlsPanel(
+                    state = state,
+                    tab = controlTab,
+                    onTabChange = { controlTab = it },
+                    onBrowseArcs = { showArcs = true },
+                    onPrograms = { showPrograms = true },
+                    onClose = { controlsOpen = false },
+                    modifier = if (wide) {
+                        Modifier
+                            .fillMaxHeight()
+                            .fillMaxWidth(
+                                if (maxWidth >= 900.dp) 0.42f else 0.48f,
+                            )
+                    } else {
+                        Modifier
                             .fillMaxWidth()
-                            .weight(1.05f),
-                    )
-                    ControlsPanel(
-                        state = state,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1.15f),
-                    )
-                }
+                            .fillMaxHeight(0.58f)
+                    },
+                )
             }
         }
+    }
+
+    if (showPrograms) {
+        ProgramsDialog(
+            context = context,
+            currentName = state.page.name,
+            currentText = state.page.toText(),
+            onLoad = { text ->
+                if (state.loadText(text)) showPrograms = false
+            },
+            onClose = { showPrograms = false },
+            onStatus = { state.status = it },
+        )
+    }
+    if (showArcs) {
+        ArcBrowserDialog(state = state, onClose = { showArcs = false })
     }
 }
 
@@ -596,12 +758,21 @@ private fun ScoreCanvas(state: UpicState, modifier: Modifier = Modifier) {
                 )
             }
             Spacer(Modifier.weight(1f))
-            Text(
-                "${state.page.arcs.size} arcs · " +
-                    String.format(Locale.US, "%.1f s", duration),
-                fontSize = 10.sp,
-                color = TextDim,
-            )
+            TextButton(
+                onClick = { state.zoomView(1f / 1.35f) },
+                contentPadding = PaddingValues(horizontal = 6.dp),
+                modifier = Modifier.height(32.dp),
+            ) { Text("−", fontSize = 18.sp) }
+            TextButton(
+                onClick = { state.zoomView(1.35f) },
+                contentPadding = PaddingValues(horizontal = 6.dp),
+                modifier = Modifier.height(32.dp),
+            ) { Text("+", fontSize = 18.sp) }
+            TextButton(
+                onClick = { state.fitView() },
+                contentPadding = PaddingValues(horizontal = 6.dp),
+                modifier = Modifier.height(32.dp),
+            ) { Text("Fit", fontSize = 11.sp) }
         }
 
         Canvas(
@@ -611,35 +782,94 @@ private fun ScoreCanvas(state: UpicState, modifier: Modifier = Modifier) {
                 .pointerInput(state.tool, state.revision) {
                     val width = size.width.toFloat().coerceAtLeast(1f)
                     val height = size.height.toFloat().coerceAtLeast(1f)
-                    fun timeAt(x: Float) =
-                        (x / width).coerceIn(0f, 1f) * duration
-                    fun pitchAt(y: Float) =
-                        (1f - (y / height).coerceIn(0f, 1f)).toDouble()
+                    val touchSlop = viewConfiguration.touchSlop
 
-                    if (state.tool == UpicTool.Draw) {
-                        detectDragGestures(
-                            onDragStart = { offset ->
-                                state.startDraft(
-                                    timeAt(offset.x),
-                                    pitchAt(offset.y),
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        var lastPosition = down.position
+                        var totalMovement = 0f
+                        var transforming = false
+                        var drawing = state.tool == UpicTool.Draw
+                        var lastDistance = 0f
+                        var lastCentroid = Offset.Zero
+
+                        if (drawing) {
+                            state.startDraft(
+                                state.timeAt(down.position.x / width),
+                                state.pitchAt(down.position.y / height),
+                            )
+                        }
+
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            val pressed = event.changes.filter { it.pressed }
+                            if (pressed.isEmpty()) break
+
+                            if (pressed.size >= 2) {
+                                if (drawing) {
+                                    state.cancelDraft()
+                                    drawing = false
+                                }
+                                transforming = true
+                                val a = pressed[0].position
+                                val b = pressed[1].position
+                                val centroid = Offset(
+                                    (a.x + b.x) / 2f,
+                                    (a.y + b.y) / 2f,
                                 )
-                            },
-                            onDrag = { change, _ ->
-                                state.appendDraft(
-                                    timeAt(change.position.x),
-                                    pitchAt(change.position.y),
+                                val distance = sqrt(
+                                    (a.x - b.x) * (a.x - b.x) +
+                                        (a.y - b.y) * (a.y - b.y),
                                 )
-                                change.consume()
-                            },
-                            onDragEnd = { state.finishDraft() },
-                            onDragCancel = { state.cancelDraft() },
-                        )
-                    } else {
-                        detectTapGestures { offset ->
+                                if (lastDistance > 0f) {
+                                    val factor = (distance / lastDistance)
+                                        .coerceIn(0.5f, 2f)
+                                    state.zoomView(
+                                        factor,
+                                        state.timeAt(centroid.x / width),
+                                        state.pitchAt(centroid.y / height),
+                                    )
+                                    state.panView(
+                                        centroid.x - lastCentroid.x,
+                                        centroid.y - lastCentroid.y,
+                                        width,
+                                        height,
+                                    )
+                                }
+                                lastDistance = distance
+                                lastCentroid = centroid
+                                pressed.forEach { it.consume() }
+                            } else {
+                                val change = pressed.first()
+                                val delta =
+                                    change.position - lastPosition
+                                lastPosition = change.position
+                                totalMovement += sqrt(
+                                    delta.x * delta.x + delta.y * delta.y,
+                                )
+                                if (drawing) {
+                                    state.appendDraft(
+                                        state.timeAt(change.position.x / width),
+                                        state.pitchAt(change.position.y / height),
+                                    )
+                                    change.consume()
+                                } else if (!transforming &&
+                                    totalMovement > touchSlop) {
+                                    state.panView(delta.x, delta.y, width,
+                                        height)
+                                    change.consume()
+                                }
+                            }
+                        }
+
+                        if (drawing) {
+                            state.finishDraft()
+                        } else if (!transforming &&
+                            totalMovement <= touchSlop) {
                             state.tapAt(
-                                timeAt(offset.x),
-                                pitchAt(offset.y),
-                                20.0 / height,
+                                state.timeAt(down.position.x / width),
+                                state.pitchAt(down.position.y / height),
+                                40.0 / height,
                             )
                         }
                     }
@@ -654,7 +884,7 @@ private fun ScoreCanvas(state: UpicState, modifier: Modifier = Modifier) {
             for (i in 0..4) {
                 val x = width * i / 4f
                 drawLine(Grid, Offset(x, 0f), Offset(x, height), 1f)
-                val seconds = duration * i / 4.0
+                val seconds = state.timeStart + state.timeSpan * i / 4f
                 drawContext.canvas.nativeCanvas.drawText(
                     String.format(Locale.US, "%.1fs", seconds),
                     if (i == 0) x + 4f else x - 24f,
@@ -668,9 +898,10 @@ private fun ScoreCanvas(state: UpicState, modifier: Modifier = Modifier) {
                 val y = height * i / 4f
                 drawLine(Grid, Offset(0f, y), Offset(width, y), 1f)
                 if (i == 4) continue
-                val norm = 1.0 - i / 4.0
+                val norm = state.pitchHigh -
+                    (state.pitchHigh - state.pitchLow) * i / 4f
                 drawContext.canvas.nativeCanvas.drawText(
-                    formattedHz(table.normToHz(norm)),
+                    formattedHz(table.normToHz(norm.toDouble())),
                     4f,
                     if (i == 0) y + labelSize else y - 4f,
                     labelPaint,
@@ -683,8 +914,8 @@ private fun ScoreCanvas(state: UpicState, modifier: Modifier = Modifier) {
                 val color = GroupColors[arc.group.mod(GroupColors.size)]
                 val path = Path()
                 arc.points.forEachIndexed { pointIndex, point ->
-                    val x = (point.time / duration).toFloat() * width
-                    val y = (1.0 - point.pitch).toFloat() * height
+                    val x = state.xForTime(point.time, width)
+                    val y = state.yForPitch(point.pitch, height)
                     if (pointIndex == 0) path.moveTo(x, y)
                     else path.lineTo(x, y)
                 }
@@ -701,8 +932,8 @@ private fun ScoreCanvas(state: UpicState, modifier: Modifier = Modifier) {
             if (state.draftPoints.size >= 2) {
                 val path = Path()
                 state.draftPoints.forEachIndexed { index, point ->
-                    val x = (point.time / duration).toFloat() * width
-                    val y = (1.0 - point.pitch).toFloat() * height
+                    val x = state.xForTime(point.time, width)
+                    val y = state.yForPitch(point.pitch, height)
                     if (index == 0) path.moveTo(x, y)
                     else path.lineTo(x, y)
                 }
@@ -713,11 +944,20 @@ private fun ScoreCanvas(state: UpicState, modifier: Modifier = Modifier) {
                 )
             }
 
-            val playX = (state.playhead / duration).toFloat() * width
+            val playX = state.xForTime(state.playhead, width)
             if (playX in 0f..width) {
                 drawLine(Amber, Offset(playX, 0f), Offset(playX, height), 2f)
                 drawCircle(Amber, 5f, Offset(playX, 0f))
             }
+
+            labelPaint.textAlign = Paint.Align.RIGHT
+            drawContext.canvas.nativeCanvas.drawText(
+                "${state.page.arcs.size} arcs",
+                width - 6f,
+                labelSize + 2f,
+                labelPaint,
+            )
+            labelPaint.textAlign = Paint.Align.LEFT
 
             drawRect(
                 Color(0xFF2D525E),
@@ -728,27 +968,156 @@ private fun ScoreCanvas(state: UpicState, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun ControlsPanel(state: UpicState, modifier: Modifier = Modifier) {
+private fun ControlsPanel(
+    state: UpicState,
+    tab: ControlTab,
+    onTabChange: (ControlTab) -> Unit,
+    onBrowseArcs: () -> Unit,
+    onPrograms: () -> Unit,
+    onClose: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     state.revision // observe page mutations
-    LazyColumn(
+    Column(
         modifier = modifier
-            .background(Background)
+            .background(PanelRaised)
             .padding(horizontal = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        item { TransportCard(state) }
-        if (state.selectedArc in state.page.arcs.indices) {
-            item { ArcCard(state) }
-        }
-        item { GeneratorCard(state) }
-        item { GendynCard(state) }
-        item {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Text(
-                state.status,
-                color = TextDim,
-                fontSize = 11.sp,
-                modifier = Modifier.padding(bottom = 16.dp),
+                "Controls",
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp,
             )
+            Spacer(Modifier.weight(1f))
+            TextButton(onClick = onPrograms) { Text("Programs") }
+            TextButton(onClick = onClose) { Text("Hide") }
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            ControlTab.entries.forEach { item ->
+                FilterChip(
+                    selected = tab == item,
+                    onClick = { onTabChange(item) },
+                    label = { Text(item.label, fontSize = 10.sp) },
+                )
+            }
+        }
+        HorizontalDivider(color = Background)
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            when (tab) {
+                ControlTab.Transport -> {
+                    item { TransportCard(state) }
+                }
+                ControlTab.Generate -> {
+                    item { GeneratorCard(state) }
+                }
+                ControlTab.Gendyn -> {
+                    item { GendynCard(state) }
+                }
+                ControlTab.Edit -> {
+                    item {
+                        OutlinedButton(
+                            onClick = onBrowseArcs,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(
+                                "Browse arcs (${state.page.arcs.size})  ·  " +
+                                    "select, deselect, delete",
+                                fontSize = 11.sp,
+                            )
+                        }
+                    }
+                    if (state.selectedArc in state.page.arcs.indices) {
+                        item { ArcCard(state) }
+                    } else {
+                        item {
+                            Text(
+                                "Tap an arc on the canvas, or browse the list.",
+                                color = TextDim,
+                                fontSize = 11.sp,
+                                modifier = Modifier.padding(vertical = 10.dp),
+                            )
+                        }
+                    }
+                }
+            }
+            item { Spacer(Modifier.height(8.dp)) }
+        }
+        Text(
+            state.status,
+            color = TextDim,
+            fontSize = 10.sp,
+            modifier = Modifier.padding(vertical = 6.dp),
+        )
+    }
+}
+
+@Composable
+private fun QuickBar(
+    state: UpicState,
+    onPrograms: () -> Unit,
+    onArcs: () -> Unit,
+    onControls: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        color = Panel,
+        tonalElevation = 4.dp,
+        modifier = modifier
+            .fillMaxWidth()
+            .height(54.dp),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Button(
+                onClick = { state.togglePlay() },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (state.playing) Amber else Accent,
+                    contentColor = Background,
+                ),
+                contentPadding = PaddingValues(horizontal = 14.dp),
+                modifier = Modifier.height(38.dp),
+            ) {
+                Text(if (state.playing) "Stop" else "Play", fontSize = 12.sp)
+            }
+            Text(
+                String.format(Locale.US, "%.2f s", state.playhead),
+                color = TextDim,
+                fontSize = 10.sp,
+            )
+            Spacer(Modifier.weight(1f))
+            TextButton(
+                onClick = onArcs,
+                contentPadding = PaddingValues(horizontal = 6.dp),
+            ) { Text("Arcs", fontSize = 11.sp) }
+            TextButton(
+                onClick = onPrograms,
+                contentPadding = PaddingValues(horizontal = 6.dp),
+            ) { Text("Programs", fontSize = 11.sp) }
+            TextButton(
+                onClick = onControls,
+                contentPadding = PaddingValues(horizontal = 6.dp),
+            ) { Text("Controls", fontSize = 11.sp) }
         }
     }
 }
@@ -827,8 +1196,14 @@ private fun ArcCard(state: UpicState) {
                 color = TextDim,
             )
             Spacer(Modifier.weight(1f))
+            TextButton(onClick = {
+                state.selectedArc = -1
+                state.status = "Selection cleared"
+            }) {
+                Text("Deselect", color = TextDim, fontSize = 11.sp)
+            }
             TextButton(onClick = { state.deleteSelected() }) {
-                Text("Delete", color = Amber)
+                Text("Delete", color = Amber, fontSize = 11.sp)
             }
         }
         ControlSlider(
